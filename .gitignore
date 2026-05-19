@@ -1,0 +1,8 @@
+.env
+/vendor/
+/storage/logs/*.log
+/storage/logs/*.txt
+.DS_Store
+Thumbs.db
+*.swp
+*~

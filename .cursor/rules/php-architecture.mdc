@@ -1,0 +1,38 @@
+---
+description: Enforces strict separation of procedural PHP (MVC-like architecture), exclusive use of Tailwind CSS, and sync between Apache localhost rewrites and live Nginx routes
+globs: *.php, *.html
+---
+
+# Procedural PHP, Tailwind CSS, and Apache/Nginx Routing Rules
+
+You are assisting an expert PHP developer building a procedural PHP application with strict MVC-like separation of concerns. Do not invent new architectures, do not convert the project to OOP unnecessarily, and do not introduce external PHP frameworks.
+
+## Environment Awareness
+- **Local environment:** Development runs on `localhost` using **Apache**.
+- **Live environment:** Production runs on **Nginx**.
+- **Routing parity is required:** Any routing behavior implemented for Apache local development, including `.htaccess` rules, `mod_rewrite`, redirects, canonicalization, trailing-slash handling, front-controller rewrites, denied paths, and other URL behavior, must also be reflected in `deploy/nginx/app-routes.conf`.
+- **Do not assume `.htaccess` works on production:** Nginx does not read `.htaccess` files, so Apache rewrite behavior must always be translated into the Nginx route config file.
+- When creating, modifying, or suggesting any `.htaccess`, rewrite, redirect, or URL-routing logic, also update or provide the matching Nginx equivalent in `deploy/nginx/app-routes.conf`.
+- If a rewrite or redirect rule is ambiguous, call it out explicitly and propose matching Apache and Nginx rules together.
+-never change code outside of this project, only in the project folder lindon
+
+## Core Separation of Concerns (MVC-like Boundaries)
+- **Controllers (Orchestration):** Use procedural PHP files as front-controllers. They should only handle basic routing, receive input, call specific business logic functions, and include the view file.
+- **Business Logic & Data:** Keep SQL queries completely out of views and mostly out of controllers. Make functions small, single-purpose, and store them in dedicated logic files. Introduce classes ONLY if they solve a very specific problem.
+- **Views (Templates):** Keep business logic out of templates. Views must only loop through data provided by the controller and render HTML.
+
+## Styling (Tailwind CSS Exclusively)
+- **Tailwind Only:** Use ONLY Tailwind CSS utility classes for all styling, layout, typography, and responsive design directly in the view files.
+- **Strict Prohibitions:** Do NOT write custom CSS in `<style>` tags. Do NOT create external `.css` files for component styling. Do NOT use Bootstrap, Foundation, or any other CSS framework under any circumstances.
+- **Component Consistency:** When generating UI elements (like buttons, forms, or cards), reuse established Tailwind class combinations to maintain a consistent design system across the application.
+-try to use the current branding and colors on the site where possible, unless asked to do otherwise
+
+## Security & Best Practices
+- **Escaping:** Always use the global `e()` helper function for output escaping in every single view. Context-aware output encoding is strictly required for untrusted data.
+- **Bootstrapping:** Keep all application setup in one central `bootstrap.php` file (environment loading, DB connection, session starts, and shared includes). Do not duplicate setup code across different pages.
+
+## Code Quality & Refactoring
+- Write clean, maintainable procedural PHP. Keep it MVP-quality but highly extensible.
+- When adding new features, actively look for and consolidate redundant logic or duplicate helpers instead of blindly appending new code.
+- Treat Apache localhost routing and live Nginx routing as a paired concern whenever URL structure is affected.
+
