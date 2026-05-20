@@ -14,6 +14,9 @@ $nav_link = static function (string $page, string $href, string $label) use ($cu
 
 <nav class="flex flex-wrap gap-x-8 gap-y-2 mb-6 text-[11px] uppercase tracking-editorial font-medium border-b border-border">
     <?= $nav_link('hello', 'index.php?action=hello', 'Members Home') ?>
+    <?= $nav_link('journey', 'index.php?action=journey', 'Learn') ?>
+    <?= $nav_link('prepare', 'index.php?action=prepare', 'Prepare') ?>
+    <?= $nav_link('preferences', 'index.php?action=preferences', 'Preferences') ?>
     <?= $nav_link('profile', 'index.php?action=profile', 'Profile') ?>
 </nav>
 

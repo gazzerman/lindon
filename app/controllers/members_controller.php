@@ -15,6 +15,9 @@ require_once __DIR__ . '/../helpers/username_policy.php';
 require_once __DIR__ . '/../helpers/token_helper.php';
 require_once __DIR__ . '/../services/captcha_service.php';
 require_once __DIR__ . '/../services/rate_limit_service.php';
+require_once __DIR__ . '/../services/member_learning_service.php';
+require_once __DIR__ . '/../services/member_prepare_service.php';
+require_once __DIR__ . '/../services/member_badges_service.php';
 
 function members_route_controller(PDO $pdo, string $method, array $get, array $post): void
 {
@@ -97,11 +100,153 @@ function members_render_action(PDO $pdo, string $action, array $get): void
 
         case 'hello':
             members_guard_require_login();
-            $member = members_profile_service_get($pdo, members_session_current_member_id());
+            $member_id = members_session_current_member_id();
+            $member = members_profile_service_get($pdo, $member_id);
+            $journey = member_learning_service_get_journey_payload($pdo, $member_id);
             render('members/hello', [
                 'member' => $member,
                 'csrf_token' => csrf_generate_token(),
                 'flash' => $flash,
+                'current_page' => 'hello',
+                'preferences' => $journey['preferences'],
+                'events' => $journey['events'],
+                'badges' => $journey['badges'],
+                'progress_map' => $journey['progress_map'],
+            ]);
+            return;
+
+        case 'journey':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $member = members_profile_service_get($pdo, $member_id);
+            $journey = member_learning_service_get_journey_payload($pdo, $member_id);
+            render('members/journey', [
+                'member' => $member,
+                'csrf_token' => csrf_generate_token(),
+                'flash' => $flash,
+                'current_page' => 'journey',
+                'breadcrumbs' => [
+                    ['label' => 'Members', 'url' => 'index.php?action=hello'],
+                    ['label' => 'Learning Journey', 'url' => ''],
+                ],
+                'preferences' => $journey['preferences'],
+                'events' => $journey['events'],
+                'badges' => $journey['badges'],
+                'progress_map' => $journey['progress_map'],
+            ]);
+            return;
+
+        case 'event':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $member = members_profile_service_get($pdo, $member_id);
+            $preferences = member_learning_service_get_preferences($pdo, $member_id);
+            $question_id = isset($get['question_id']) ? (int) $get['question_id'] : (int) ($preferences['current_selected_question_id'] ?? 0);
+            if ($question_id <= 0) {
+                members_set_flash('error', 'Select a life event to begin your learning journey.');
+                header('Location: index.php?action=journey');
+                exit;
+            }
+            $payload = member_learning_service_get_event_payload($pdo, $member_id, $question_id);
+            if ($payload === null) {
+                members_set_flash('error', 'That life event could not be found.');
+                header('Location: index.php?action=journey');
+                exit;
+            }
+            render('members/event', [
+                'member' => $member,
+                'csrf_token' => csrf_generate_token(),
+                'flash' => $flash,
+                'current_page' => 'journey',
+                'breadcrumbs' => [
+                    ['label' => 'Members', 'url' => 'index.php?action=hello'],
+                    ['label' => 'Learning Journey', 'url' => 'index.php?action=journey'],
+                    ['label' => (string) ($payload['event']['question'] ?? 'Event'), 'url' => ''],
+                ],
+                'payload' => $payload,
+            ]);
+            return;
+
+        case 'lesson':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $member = members_profile_service_get($pdo, $member_id);
+            $lesson_id = isset($get['lesson_id']) ? (int) $get['lesson_id'] : 0;
+            if ($lesson_id <= 0) {
+                members_set_flash('error', 'Select a lesson to continue.');
+                header('Location: index.php?action=journey');
+                exit;
+            }
+            $payload = member_learning_service_get_lesson_payload($pdo, $member_id, $lesson_id);
+            if ($payload === null) {
+                members_set_flash('error', 'Lesson not found.');
+                header('Location: index.php?action=journey');
+                exit;
+            }
+            render('members/lesson', [
+                'member' => $member,
+                'csrf_token' => csrf_generate_token(),
+                'flash' => $flash,
+                'current_page' => 'journey',
+                'breadcrumbs' => [
+                    ['label' => 'Members', 'url' => 'index.php?action=hello'],
+                    ['label' => 'Learning Journey', 'url' => 'index.php?action=journey'],
+                    ['label' => (string) ($payload['lesson']['event_question'] ?? 'Event'), 'url' => 'index.php?action=event&question_id=' . (int) ($payload['lesson']['question_id'] ?? 0)],
+                    ['label' => (string) ($payload['lesson']['title'] ?? 'Lesson'), 'url' => ''],
+                ],
+                'payload' => $payload,
+            ]);
+            return;
+
+        case 'prepare':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $member = members_profile_service_get($pdo, $member_id);
+            $preferences = member_learning_service_get_preferences($pdo, $member_id);
+            $question_id = isset($get['question_id']) ? (int) $get['question_id'] : (int) ($preferences['current_selected_question_id'] ?? 0);
+            if ($question_id <= 0) {
+                members_set_flash('error', 'Choose a life event before opening Prepare.');
+                header('Location: index.php?action=journey');
+                exit;
+            }
+            $event = member_learning_repository_find_event($pdo, $question_id);
+            if ($event === null) {
+                members_set_flash('error', 'That life event could not be found.');
+                header('Location: index.php?action=journey');
+                exit;
+            }
+            $prepare_payload = member_prepare_service_get_payload($pdo, $member_id, $question_id);
+            render('members/prepare', [
+                'member' => $member,
+                'csrf_token' => csrf_generate_token(),
+                'flash' => $flash,
+                'current_page' => 'prepare',
+                'breadcrumbs' => [
+                    ['label' => 'Members', 'url' => 'index.php?action=hello'],
+                    ['label' => 'Prepare', 'url' => ''],
+                ],
+                'event' => $event,
+                'question_id' => $question_id,
+                'prepare_payload' => $prepare_payload,
+                'badges' => member_learning_repository_list_badges($pdo, $member_id),
+            ]);
+            return;
+
+        case 'preferences':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $member = members_profile_service_get($pdo, $member_id);
+            render('members/preferences', [
+                'member' => $member,
+                'csrf_token' => csrf_generate_token(),
+                'flash' => $flash,
+                'current_page' => 'preferences',
+                'breadcrumbs' => [
+                    ['label' => 'Members', 'url' => 'index.php?action=hello'],
+                    ['label' => 'Preferences', 'url' => ''],
+                ],
+                'preferences' => member_learning_service_get_preferences($pdo, $member_id),
+                'events' => member_learning_repository_list_events($pdo),
             ]);
             return;
 
@@ -324,6 +469,102 @@ function members_handle_post(PDO $pdo, array $post): void
                 $result['ok'] ? 'Verification email resent.' : (string) $result['message']
             );
             header('Location: index.php?action=verify-notice&member_id=' . $member_id);
+            exit;
+
+        case 'select-learning-event':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $question_id = (int) ($post['question_id'] ?? 0);
+            if (!member_learning_service_select_event($pdo, $member_id, $question_id)) {
+                members_set_flash('error', 'Please select a valid life event.');
+                header('Location: index.php?action=journey');
+                exit;
+            }
+            members_set_flash('success', 'Life event selected. You can now continue your journey.');
+            header('Location: index.php?action=event&question_id=' . $question_id);
+            exit;
+
+        case 'save-learning-preferences':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $preferences = member_learning_service_save_preferences($pdo, $member_id, $post);
+            members_set_flash('success', 'Learning preferences saved.');
+            if (!empty($preferences['current_selected_question_id'])) {
+                header('Location: index.php?action=event&question_id=' . (int) $preferences['current_selected_question_id']);
+                exit;
+            }
+            header('Location: index.php?action=preferences');
+            exit;
+
+        case 'complete-lesson':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $lesson_id = (int) ($post['lesson_module_id'] ?? 0);
+            $result = member_learning_service_complete_lesson($pdo, $member_id, $lesson_id, $post);
+            if (!$result['ok']) {
+                members_set_flash('error', (string) ($result['message'] ?? 'Unable to submit lesson.'));
+                header('Location: index.php?action=lesson&lesson_id=' . $lesson_id);
+                exit;
+            }
+
+            $saved_question = trim((string) ($post['saved_question_text'] ?? ''));
+            if ($saved_question !== '') {
+                member_prepare_service_save_question($pdo, $member_id, (int) $result['question_id'], $lesson_id, $saved_question);
+            }
+
+            members_set_flash(
+                'success',
+                ($result['is_correct'] ? 'Correct. ' : 'Submitted. ') . 'Badge progress updated for ' . (string) ($result['lesson_title'] ?? 'this lesson') . '.'
+            );
+            header('Location: index.php?action=lesson&lesson_id=' . $lesson_id);
+            exit;
+
+        case 'save-suggested-question':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $question_id = (int) ($post['question_id'] ?? 0);
+            $text = (string) ($post['saved_question_text'] ?? '');
+            if (!member_prepare_service_save_question($pdo, $member_id, $question_id, null, $text)) {
+                members_set_flash('error', 'Please choose a question to save.');
+            } else {
+                members_set_flash('success', 'Question saved to your preparation list.');
+            }
+            header('Location: index.php?action=prepare&question_id=' . $question_id);
+            exit;
+
+        case 'save-custom-question':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $question_id = (int) ($post['question_id'] ?? 0);
+            $text = (string) ($post['saved_question_text'] ?? '');
+            if (!member_prepare_service_save_question($pdo, $member_id, $question_id, null, $text)) {
+                members_set_flash('error', 'Please add your custom question before saving.');
+            } else {
+                members_set_flash('success', 'Custom question saved.');
+            }
+            header('Location: index.php?action=prepare&question_id=' . $question_id);
+            exit;
+
+        case 'save-prepare-progress':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $question_id = (int) ($post['question_id'] ?? 0);
+            $checklist_items = isset($post['checklist_items']) && is_array($post['checklist_items']) ? $post['checklist_items'] : [];
+            $notes = (string) ($post['notes_text'] ?? '');
+            member_prepare_service_save_progress($pdo, $member_id, $question_id, $checklist_items, $notes);
+            member_badges_service_sync_for_event($pdo, $member_id, $question_id);
+            members_set_flash('success', 'Preparation notes and checklist saved.');
+            header('Location: index.php?action=prepare&question_id=' . $question_id);
+            exit;
+
+        case 'mark-feel-ready':
+            members_guard_require_login();
+            $member_id = members_session_current_member_id();
+            $question_id = (int) ($post['question_id'] ?? 0);
+            member_prepare_service_mark_ready($pdo, $member_id, $question_id);
+            member_badges_service_sync_for_event($pdo, $member_id, $question_id);
+            members_set_flash('success', 'Marked as ready. You are prepared, curious, and clear on what matters most.');
+            header('Location: index.php?action=prepare&question_id=' . $question_id);
             exit;
 
         case 'logout':

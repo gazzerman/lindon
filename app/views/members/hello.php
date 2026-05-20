@@ -1,123 +1,92 @@
 <?php
 declare(strict_types=1);
 
-$sample_questions = [
-    ['kicker' => 'On values', 'text' => 'What were the original intentions behind establishing this trust, and how have they evolved?'],
-    ['kicker' => 'On contribution', 'text' => 'Where in the family portfolio would you suggest I begin to develop a genuine understanding?'],
-    ['kicker' => 'On succession', 'text' => 'How do you imagine my role in the family changing over the next decade?'],
-    ['kicker' => 'On philanthropy', 'text' => 'Which of our giving commitments are you most proud of, and why?'],
-    ['kicker' => 'On governance', 'text' => 'Which decisions are mine to make today, and which will become mine in time?'],
-    ['kicker' => 'On dialogue', 'text' => 'Is there a conversation between us that you wish we had begun sooner?'],
-];
+$members_page_title = 'Linden — Members';
+$members_page_description = 'Your private learning and preparation workspace.';
+$members_hero_kicker = 'Members Area';
+$members_hero_title = 'My Learning Journey';
+$members_hero_subtitle = 'A calm, private space to learn, prepare, and arrive at important conversations with clarity.';
 
-$first_name = trim((string) ($member['first_name'] ?? ''));
-$display_name = $first_name !== '' ? $first_name : (string) ($member['username'] ?? 'Member');
-
-$fn = trim((string) ($member['first_name'] ?? ''));
-$ln = trim((string) ($member['last_name'] ?? ''));
-if ($fn !== '' && $ln !== '') {
-    $initials = strtoupper(substr($fn, 0, 1) . substr($ln, 0, 1));
-} elseif ($fn !== '') {
-    $initials = strtoupper(substr($fn, 0, 2));
-} else {
-    $initials = strtoupper(substr((string) ($member['username'] ?? 'M'), 0, 2));
+$selected_question_id = (int) ($preferences['current_selected_question_id'] ?? 0);
+$selected_event = null;
+foreach (($events ?? []) as $event_item) {
+    if ((int) ($event_item['id'] ?? 0) === $selected_question_id) {
+        $selected_event = $event_item;
+        break;
+    }
 }
+$selected_progress = $progress_map[$selected_question_id] ?? ['completed' => 0, 'total' => 0];
 
-$page_title = 'Linden  Members';
-require __DIR__ . '/../layout/linden_head.php';
+require __DIR__ . '/partials/members_shell_start.php';
+require __DIR__ . '/partials/subnav.php';
 ?>
 
-<div class="min-h-screen bg-background text-foreground">
-    <nav class="flex justify-between items-center px-6 md:px-10 py-6 border-b border-border">
-        <a href="../index.php" class="text-base md:text-lg font-serif font-medium uppercase tracking-editorial text-foreground">Linden</a>
-        <div class="hidden md:flex gap-10 text-[11px] uppercase tracking-editorial font-medium text-muted-foreground">
-            <a href="../index.php" class="hover:text-foreground transition-colors">House</a>
-            <span class="text-accent">Members</span>
-        </div>
-        <a href="index.php?action=profile" class="size-9 rounded-full border border-border grid place-items-center text-[10px] font-serif italic tracking-wider hover:border-accent transition-colors" title="Profile"><?= e($initials) ?></a>
-    </nav>
-
-    <header class="relative h-[40vh] min-h-[280px] w-full overflow-hidden border-b border-border">
-        <img
-            src="../assets/images/interior-room.jpg"
-            alt="A heritage drawing room with arched windows"
-            width="1600"
-            height="1200"
-            class="absolute inset-0 h-full w-full object-cover"
-        >
-        <div class="absolute inset-0 bg-gradient-to-b from-[oklch(0.18_0.03_50/0.65)] via-[oklch(0.18_0.03_50/0.45)] to-[oklch(0.18_0.03_50/0.75)]"></div>
-        <div class="relative z-10 h-full max-w-6xl mx-auto px-6 md:px-10 flex flex-col justify-end pb-10 md:pb-14">
-            <span class="text-[10px] uppercase tracking-editorial text-background/70 block mb-3">Members Area</span>
-            <h1 class="font-serif font-semibold text-3xl md:text-5xl tracking-display text-background text-pretty">
-                Good afternoon, <?= e($display_name) ?>.
-            </h1>
-        </div>
-    </header>
-
-    <section class="bg-background">
-        <div class="max-w-5xl mx-auto px-6 md:px-10 py-16 md:py-24">
-            <div class="bg-card border border-border p-8 md:p-12">
-                <div class="flex justify-between items-end mb-10 pb-8 border-b border-border">
-                    <div>
-                        <span class="text-[10px] uppercase tracking-editorial text-muted-foreground">Currently preparing</span>
-                        <h2 class="font-serif text-3xl mt-3">Annual Trustee Review</h2>
-                        <p class="text-xs text-muted-foreground mt-2">Friday, 12 December · 10:00 AM · Library, Belgrave House</p>
-                    </div>
-                    <span class="text-[10px] uppercase tracking-editorial text-accent hidden sm:block">75% complete</span>
+            <?php if (!empty($flash)): ?>
+                <div class="mb-6 border px-4 py-3 text-sm leading-relaxed <?= $flash['type'] === 'error' ? 'border-red-900/20 bg-red-50 text-red-950' : 'border-accent/30 bg-accent/10 text-foreground' ?>">
+                    <?= e((string) $flash['message']) ?>
                 </div>
-                <div class="grid sm:grid-cols-2 gap-px bg-border border border-border">
-                    <div class="bg-card p-8">
-                        <span class="text-[10px] uppercase tracking-editorial text-muted-foreground block mb-4">Saved Deck</span>
-                        <h3 class="font-serif text-xl mb-2">The Language of Fiduciary Duty</h3>
-                        <p class="text-sm text-muted-foreground">7 questions selected for rehearsal</p>
-                        <a href="#library" class="mt-6 inline-block text-[10px] uppercase tracking-editorial text-accent">Review deck →</a>
+            <?php endif; ?>
+
+            <div class="bg-card border border-border p-8 md:p-10 mb-8">
+                <span class="text-[10px] uppercase tracking-editorial text-accent block mb-2">Continue your journey</span>
+                <?php if ($selected_event !== null): ?>
+                    <h2 class="font-serif text-2xl md:text-3xl tracking-display"><?= e((string) $selected_event['question']) ?></h2>
+                    <p class="mt-3 text-sm text-muted-foreground">
+                        <?= e((string) ($selected_progress['completed'] ?? 0)) ?> of <?= e((string) ($selected_progress['total'] ?? 0)) ?> lessons completed.
+                    </p>
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        <a href="index.php?action=event&question_id=<?= e((string) $selected_question_id) ?>" class="<?= e($members_btn) ?>">Resume learning</a>
+                        <a href="index.php?action=prepare&question_id=<?= e((string) $selected_question_id) ?>" class="<?= e($members_btn_secondary) ?>">Open prepare</a>
                     </div>
-                    <div class="bg-card p-8">
-                        <span class="text-[10px] uppercase tracking-editorial text-muted-foreground block mb-4">Next Suggested</span>
-                        <h3 class="font-serif text-xl mb-2">Onboarding the Family Council</h3>
-                        <p class="text-sm text-muted-foreground">A short reading before your meeting.</p>
-                        <a href="#library" class="mt-6 inline-block text-[10px] uppercase tracking-editorial text-accent">Open guide →</a>
-                    </div>
+                <?php else: ?>
+                    <h2 class="font-serif text-2xl md:text-3xl tracking-display">Choose your first life event</h2>
+                    <p class="mt-3 text-sm text-muted-foreground">Select an event below to begin your members-only learning path.</p>
+                    <a href="index.php?action=journey" class="<?= e($members_btn) ?> inline-block mt-6">Start journey</a>
+                <?php endif; ?>
+            </div>
+
+            <div class="bg-card border border-border p-8 md:p-10 mb-8">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <h3 class="font-serif text-2xl tracking-display">Available life events</h3>
+                    <a href="index.php?action=journey" class="text-[11px] uppercase tracking-editorial text-accent">View details</a>
+                </div>
+                <div class="space-y-3">
+                    <?php foreach (($events ?? []) as $event): ?>
+                        <?php
+                        $event_id = (int) ($event['id'] ?? 0);
+                        $is_current = $event_id === $selected_question_id;
+                        ?>
+                        <form method="post" action="index.php" class="border <?= $is_current ? 'border-accent bg-accent/5' : 'border-border' ?> p-4 flex flex-wrap items-center justify-between gap-3">
+                            <input type="hidden" name="action" value="select-learning-event">
+                            <input type="hidden" name="csrf_token" value="<?= e((string) $csrf_token) ?>">
+                            <input type="hidden" name="question_id" value="<?= e((string) $event_id) ?>">
+                            <div>
+                                <p class="font-serif text-lg"><?= e((string) ($event['question'] ?? 'Life Event')) ?></p>
+                                <?php if ($is_current): ?>
+                                    <p class="text-[10px] uppercase tracking-editorial text-accent mt-1">Current selected event</p>
+                                <?php endif; ?>
+                            </div>
+                            <button type="submit" class="<?= e($members_btn_secondary) ?>">Select</button>
+                        </form>
+                    <?php endforeach; ?>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <section id="library" class="bg-foreground text-background py-24 md:py-32">
-        <div class="max-w-6xl mx-auto px-6 md:px-10 grid md:grid-cols-12 gap-12 md:gap-20 items-start">
-            <div class="md:col-span-5 md:sticky md:top-12">
-                <span class="text-accent text-[11px] uppercase tracking-editorial block mb-6">From the Library</span>
-                <h2 class="font-serif font-semibold text-3xl md:text-5xl leading-tight tracking-display text-pretty">
-                    Refined inquiry, drawn from quiet rooms.
-                </h2>
-                <p class="mt-8 text-background/60 leading-relaxed max-w-md">
-                    A sample from your curated reading  composed with family governance counsel, trustees, and next-generation members. Every question is a starting point, not a script.
-                </p>
-                <div class="h-px bg-background/15 mt-12"></div>
-                <p class="mt-6 text-[10px] uppercase tracking-editorial text-background/50">Six of 412 in your library</p>
+            <div class="bg-card border border-border p-8 md:p-10">
+                <h3 class="font-serif text-2xl tracking-display mb-5">Badges earned</h3>
+                <?php if (!empty($badges)): ?>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <?php foreach ($badges as $badge): ?>
+                            <div class="border border-border p-4">
+                                <p class="text-[10px] uppercase tracking-editorial text-accent mb-1"><?= e((string) ($badge['badge_key'] ?? 'badge')) ?></p>
+                                <p class="font-serif text-lg"><?= e((string) ($badge['badge_name'] ?? 'Badge')) ?></p>
+                                <p class="text-xs text-muted-foreground mt-1"><?= e((string) ($badge['badge_description'] ?? '')) ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p class="text-sm text-muted-foreground">Complete lessons to earn your first badge.</p>
+                <?php endif; ?>
             </div>
-            <div class="md:col-span-7 space-y-px bg-background/10">
-                <?php foreach ($sample_questions as $i => $question): ?>
-                    <article class="p-8 md:p-10 bg-foreground">
-                        <div class="flex justify-between items-baseline mb-5">
-                            <span class="text-[10px] uppercase tracking-editorial text-accent"><?= e($question['kicker']) ?></span>
-                            <span class="text-[10px] font-serif italic text-background/40"><?= e(str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT)) ?></span>
-                        </div>
-                        <p class="font-serif text-xl md:text-2xl italic leading-snug text-background/90 text-pretty">
-                            “<?= e($question['text']) ?>”
-                        </p>
-                    </article>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </section>
 
-    <footer class="border-t border-border bg-background">
-        <div class="max-w-6xl mx-auto px-6 md:px-10 py-10 flex flex-col sm:flex-row justify-between items-center gap-3 text-[10px] uppercase tracking-editorial text-muted-foreground">
-            <span>© 2026 Linden &amp; Co.</span>
-            <a href="../index.php" class="hover:text-accent">Return to the House</a>
-        </div>
-    </footer>
-</div>
-
-<?php require __DIR__ . '/../layout/linden_foot.php'; ?>
+<?php require __DIR__ . '/partials/members_shell_end.php'; ?>

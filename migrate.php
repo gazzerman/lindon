@@ -28,6 +28,8 @@ $sql_files = [
     __DIR__ . '/storage/sql/alter_members_add_admin_phone.sql',
     __DIR__ . '/storage/sql/create_auth_tokens_tables.sql',
     __DIR__ . '/storage/sql/create_rate_limit_events_table.sql',
+    __DIR__ . '/storage/sql/create_members_learning_tables.sql',
+    __DIR__ . '/storage/sql/seed_members_learning_annual_family_meeting.sql',
 ];
 
 foreach ($sql_files as $file) {
