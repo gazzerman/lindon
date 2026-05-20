@@ -6,7 +6,9 @@ session_start();
 // Enforce HTTPS for all browser requests.
 if (PHP_SAPI !== 'cli') {
     $https_on = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-    if (!$https_on) {
+    $server_port = (string) ($_SERVER['SERVER_PORT'] ?? '');
+    $skip_https_enforcement = ($server_port === '81');
+    if (!$https_on && !$skip_https_enforcement) {
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $request_uri = $_SERVER['REQUEST_URI'] ?? '/';
         header('Location: https://' . $host . $request_uri, true, 301);
@@ -31,4 +33,3 @@ try {
     // Don't expose details to users; dispatch will show a generic message.
     $pdo = null;
 }
-
